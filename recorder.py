@@ -1,7 +1,6 @@
 import rclpy
 from replay_pose import PoseReplayer
 from record_pose import PoseRecorder
-from pynput import keyboard
 import time
 
 '''
@@ -28,28 +27,39 @@ ros2 run stretch_core detect_aruco_markers
 ros2 run stretch_core stretch_gamepad_teleop
 '''
 
+import sys, select, termios, tty, threading
+
 class KeyboardWatcher:
     def __init__(self):
         self.record_requested = False
         self.end_requested = False
-        self._listener = keyboard.Listener(on_press=self._on_press)
-        self._listener.start()
+        self._running = True
+        self._old_settings = termios.tcgetattr(sys.stdin)
+        new_settings = termios.tcgetattr(sys.stdin)
+        new_settings[3] &= ~(termios.ECHO | termios.ICANON)
+        termios.tcsetattr(sys.stdin, termios.TCSANOW, new_settings)
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
 
-    def _on_press(self, key):
-        if key == keyboard.Key.enter:
-            self.record_requested = True
-        elif key == keyboard.Key.esc:
-            self.end_requested = True
+    def _loop(self):
+        while self._running:
+            if select.select([sys.stdin], [], [], 0.05)[0]:
+                ch = sys.stdin.read(1)
+                if ch == '1':
+                    self.record_requested = True
+                elif ch == '0':
+                    self.end_requested = True
 
     def stop(self):
-        self._listener.stop()
-
+        self._running = False
+        self._thread.join(timeout=0.5)
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._old_settings)
 
 def main():
-    rclpy.init()
 
     pose_recorder = PoseRecorder()
-    pose_replayer = PoseReplayer()
+    pose_replayer = PoseReplayer(pose_recorder)
+
     pose_dict = {}
 
     while True:
@@ -74,7 +84,7 @@ def main():
             #use pose sequence to move robot to position
             pose_replayer.replay_poses(selected_pose_sequence)
         elif selection == 1:
-            print("Please move the robot, and press [enter] to record pose, or [escape] to end")
+            print("Please move the robot, and press [1] to record, [0] to end")
             #Wait for [enter] or [escape] key and perform action upon completion
             watcher = KeyboardWatcher()
             curr_points = []
