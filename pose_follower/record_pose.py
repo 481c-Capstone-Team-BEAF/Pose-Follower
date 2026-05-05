@@ -12,7 +12,7 @@ class PoseRecorder(hm.HelloNode):
     def __init__(self):
         hm.HelloNode.__init__(self)
         hm.HelloNode.main(
-            self, 'pose_recorder', 'pose_recorder',
+            self, 'pose_replayer', 'pose_replayer',
             wait_for_first_pointcloud=False,
         )
 

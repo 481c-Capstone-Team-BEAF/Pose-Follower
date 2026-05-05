@@ -17,15 +17,11 @@ import tf2_geometry_msgs
 import hello_helpers.hello_misc as hm
 
 
-class PoseReplayer(hm.HelloNode):
-    def __init__(self):
-        hm.HelloNode.__init__(self)
-        hm.HelloNode.main(
-            self, 'pose_replayer', 'pose_replayer',
-            wait_for_first_pointcloud=False,
-        )
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
+class PoseReplayer():
+    def __init__(self, node):
+        self.node = node
+        self.tf_buffer = node.tf_buffer
+        self.trajectory_client = node.trajectory_client
 
     def replay_poses(self, sequence):
         try:
@@ -34,7 +30,7 @@ class PoseReplayer(hm.HelloNode):
                 timeout=Duration(seconds=1.0),
             )
         except TransformException as ex:
-            self.get_logger().error(f"Cannot read base position: {ex}")
+            self.node.get_logger().error(f"Cannot read base position: {ex}")
             return
         
         start_x = tf_0.transform.translation.x
@@ -57,7 +53,7 @@ class PoseReplayer(hm.HelloNode):
                     timeout=Duration(seconds=1.0)
                 )
             except TransformException as e:
-                self.get_logger().error(f"TF transform failed: {e}")
+                self.node.get_logger().error(f"TF transform failed: {e}")
                 continue
 
             move_to_point = JointTrajectoryPoint()
@@ -78,13 +74,13 @@ class PoseReplayer(hm.HelloNode):
             trajectory_goal.trajectory.header.frame_id = 'base_link'
             
             task = self.trajectory_client.send_goal_async(trajectory_goal)
-            rclpy.spin_until_future_complete(self, task)
+            rclpy.spin_until_future_complete(self.node, task)
             task_result = task.result()
             if task_result.accepted:
                 result_future = task_result.get_result_async()
-                rclpy.spin_until_future_complete(self, result_future)
+                rclpy.spin_until_future_complete(self.node, result_future)
 
-            self.move_to_pose(
+            self.node.move_to_pose(
                 {'joint_gripper_finger_right': point['gripper_finger']},
                 blocking=True,
             )
