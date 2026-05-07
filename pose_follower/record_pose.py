@@ -2,11 +2,11 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from tf2_ros import Buffer, TransformListener, TransformException
-from nav_msgs.msg import Odometry
 from rclpy.time import Time
 from rclpy.duration import Duration
 
 import hello_helpers.hello_misc as hm
+
 
 class PoseRecorder(hm.HelloNode):
     def __init__(self):
@@ -21,8 +21,8 @@ class PoseRecorder(hm.HelloNode):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        self.parent_frame = 'target_marker'
-        self.child_frame  = 'link_grasp_center'
+        self.parent_frame = 'target_frame'
+        self.child_frame = 'link_grasp_center'
 
         self.create_subscription(
             JointState, '/stretch/joint_states',
@@ -33,7 +33,6 @@ class PoseRecorder(hm.HelloNode):
         self.latest_joint_state = msg
 
     def record(self):
-        
         try:
             tf = self.tf_buffer.lookup_transform(
                 self.parent_frame, self.child_frame, Time(),
@@ -46,7 +45,7 @@ class PoseRecorder(hm.HelloNode):
             return None
 
         if self.latest_joint_state is None:
-            self.get_logger().warn("Joint state or odom not yet received; cannot record.")
+            self.get_logger().warn("Joint state not yet received; cannot record.")
             return None
 
         js = self.latest_joint_state
@@ -54,8 +53,8 @@ class PoseRecorder(hm.HelloNode):
             wrist_yaw = js.position[js.name.index('joint_wrist_yaw')]
             wrist_pitch = js.position[js.name.index('joint_wrist_pitch')]
             wrist_roll = js.position[js.name.index('joint_wrist_roll')]
-            gripper_finger = js.position[js.name.index('joint_gripper_finger_right')]
-
+            joint_lift = js.position[js.name.index('joint_lift')]
+            wrist_extension = sum(js.position[js.name.index(f'joint_arm_l{i}')] for i in range(4))
         except ValueError as e:
             self.get_logger().error(f"Expected joint missing from /stretch/joint_states: {e}")
             return None
@@ -76,5 +75,6 @@ class PoseRecorder(hm.HelloNode):
             'wrist_yaw': float(wrist_yaw),
             'wrist_pitch': float(wrist_pitch),
             'wrist_roll': float(wrist_roll),
-            'gripper_finger': float(gripper_finger)
+            'joint_lift': float(joint_lift),
+            'wrist_extension': float(wrist_extension),
         }
