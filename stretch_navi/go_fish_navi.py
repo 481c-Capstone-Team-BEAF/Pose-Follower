@@ -8,6 +8,7 @@ from std_msgs.msg import Bool
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 import os
 import json
+import copy
 
 #Need to figure out how to get the gamebooard location
 # WAYPOINTS is what i called the file
@@ -64,8 +65,8 @@ class GoFishNavi(Node):
             self.get_logger().info("Stop signal received.")
 
     def make_pose(self, waypoint_name):
-        pose = self.waypoints[waypoint_name]
-        pose.header.stamp = self.navigator.get_clock().now().to_msg()
+        pose = copy.deepcopy(self.waypoints[waypoint_name])
+        pose.header.stamp = rclpy.time.Time().to_msg()
         return pose
 
     def navigate_to_waypoint(self, waypoint_name):
