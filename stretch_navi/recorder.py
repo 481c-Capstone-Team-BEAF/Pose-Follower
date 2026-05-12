@@ -7,6 +7,7 @@ from geometry_msgs.msg import PoseStamped
 from tf2_ros import Buffer, TransformListener, LookupException, ExtrapolationException
 from go_fish_navi import GoFishNavi, load_poses as load_poses_navi
 import copy
+from rclpy.duration import Duration
 
 '''
 A saved map of the environment is needed. Create one by using:
@@ -68,14 +69,18 @@ def save_pose(pose_dict):
         json.dump(raw, f, indent=2)
 
 def get_current_pose(node, tf_buffer):
-    # Wait until the transform is actually available
-    timeout = 5.0  # seconds
+    timeout = 5.0
     start = time.time()
     while time.time() - start < timeout:
         rclpy.spin_once(node, timeout_sec=0.1)
         try:
-            tf = tf_buffer.lookup_transform('map', 'base_link', rclpy.time.Time())
-            # Success — build and return the PoseStamped
+            now = rclpy.time.Time()
+            tf = tf_buffer.lookup_transform(
+                'map',
+                'base_link',
+                now,
+                timeout=Duration(seconds=0.5)  # wait up to 0.5s for a fresh transform
+            )
             ps = PoseStamped()
             ps.header.frame_id = 'map'
             ps.header.stamp = node.get_clock().now().to_msg()
@@ -85,7 +90,7 @@ def get_current_pose(node, tf_buffer):
             ps.pose.orientation = copy.deepcopy(tf.transform.rotation)
             return ps
         except (LookupException, ExtrapolationException):
-            continue  # Keep spinning until data arrives or timeout
+            continue
 
     node.get_logger().error('TF lookup timed out after 5s')
     return None
