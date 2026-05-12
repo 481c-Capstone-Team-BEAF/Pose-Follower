@@ -5,7 +5,7 @@ from rclpy.duration import Duration
 from rclpy.executors import SingleThreadedExecutor
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import Bool
-from nav2_simple_commander.robot_navigator import BasicNavigator, NavigationResult, TaskResult
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 import os
 import json
 
