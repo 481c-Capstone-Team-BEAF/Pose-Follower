@@ -27,7 +27,7 @@ FOLLOW THESE STEPS TO RUN:
   [3] exits
 '''
 
-POSE_FILE = os.path.expanduser('~/beaf_ws/stretch_navi/stretch_saved_poses.json')
+POSE_FILE = os.path.expanduser('~/beaf_ws/pose_follower/stretch_navi/stretch_saved_poses.json')
 
 
 def load_poses():
