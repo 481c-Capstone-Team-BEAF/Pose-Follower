@@ -6,6 +6,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 from tf2_ros import Buffer, TransformListener, LookupException, ExtrapolationException
 from go_fish_navi import GoFishNavi, load_poses as load_poses_navi
+import copy
 
 '''
 A saved map of the environment is needed. Create one by using:
@@ -81,7 +82,7 @@ def get_current_pose(node, tf_buffer):
             ps.pose.position.x = tf.transform.translation.x
             ps.pose.position.y = tf.transform.translation.y
             ps.pose.position.z = tf.transform.translation.z
-            ps.pose.orientation = tf.transform.rotation
+            ps.pose.orientation = copy.deepcopy(tf.transform.rotation)
             return ps
         except (LookupException, ExtrapolationException):
             continue  # Keep spinning until data arrives or timeout
