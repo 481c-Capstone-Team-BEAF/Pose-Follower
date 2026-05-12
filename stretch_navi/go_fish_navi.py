@@ -12,7 +12,7 @@ import json
 #Need to figure out how to get the gamebooard location
 # WAYPOINTS is what i called the file
 
-POSE_FILE = os.path.expanduser('~/beaf_ws/stretch_navi/stretch_saved_poses.json')
+POSE_FILE = os.path.expanduser('~/beaf_ws/pose_follower/stretch_navi/stretch_saved_poses.json')
 CMD_VEL_TOPIC = '/stretch/cmd_vel'
 
 def load_poses():
