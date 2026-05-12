@@ -9,6 +9,7 @@ from go_fish_navi import GoFishNavi, load_poses as load_poses_navi
 import copy
 from rclpy.duration import Duration
 import threading
+from rclpy.executors import SingleThreadedExecutor
 
 '''
 A saved map of the environment is needed. Create one by using:
@@ -102,7 +103,9 @@ def main():
     tf_buffer = Buffer()
     tf_listener = TransformListener(tf_buffer, node)
 
-    spin_thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
+    executor = SingleThreadedExecutor()
+    executor.add_node(node)
+    spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
     pose_dict = load_poses()
