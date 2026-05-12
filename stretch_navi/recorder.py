@@ -8,6 +8,7 @@ from tf2_ros import Buffer, TransformListener, LookupException, ExtrapolationExc
 from go_fish_navi import GoFishNavi, load_poses as load_poses_navi
 import copy
 from rclpy.duration import Duration
+import threading
 
 '''
 A saved map of the environment is needed. Create one by using:
@@ -100,6 +101,9 @@ def main():
     node = Node('pose_recorder')
     tf_buffer = Buffer()
     tf_listener = TransformListener(tf_buffer, node)
+
+    spin_thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
+    spin_thread.start()
 
     pose_dict = load_poses()
     navi = None
