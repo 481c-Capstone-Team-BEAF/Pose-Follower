@@ -6,10 +6,35 @@ from rclpy.executors import SingleThreadedExecutor
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import Bool
 from nav2_simple_commander.robot_navigator import BasicNavigator, NavigationResult, TaskResult
-
+import os
+import json
 
 #Need to figure out how to get the gamebooard location
 # WAYPOINTS is what i called the file
+
+POSE_FILE = os.path.expanduser('~/beaf_ws/stretch_navi/stretch_saved_poses.json')
+CMD_VEL_TOPIC = '/stretch/cmd_vel'
+
+def load_poses():
+    # Loads poses from a file to a dict
+    # dict is of form { name : PoseStamped() object }
+    if not os.path.exists(POSE_FILE):
+        return {}
+    with open(POSE_FILE, 'r') as f:
+        raw = json.load(f)
+    pose_dict = {}
+    for name, d in raw.items():
+        ps = PoseStamped()
+        ps.header.frame_id = 'map'
+        ps.pose.position.x = d['x']
+        ps.pose.position.y = d['y']
+        ps.pose.position.z = d['z']
+        ps.pose.orientation.x = d['qx']
+        ps.pose.orientation.y = d['qy']
+        ps.pose.orientation.z = d['qz']
+        ps.pose.orientation.w = d['qw']
+        pose_dict[name] = ps
+    return pose_dict
 
 class GoFishNavi(Node):
     def __init__(self):
@@ -27,6 +52,8 @@ class GoFishNavi(Node):
 
         self.stop_navigation = False
 
+        self.waypoints = load_poses()
+
         self.get_logger().info("Waiting for Nav2 to become active...")
         self.navigator.waitUntilNav2Active()
         self.get_logger().info("Nav2 is active.")
@@ -37,19 +64,8 @@ class GoFishNavi(Node):
             self.get_logger().info("Stop signal received.")
 
     def make_pose(self, waypoint_name):
-        wp = WAYPOINTS[waypoint_name]
-
-        pose = PoseStamped()
-        pose.header.frame_id = "map"
+        pose = self.waypoints[waypoint_name]
         pose.header.stamp = self.navigator.get_clock().now().to_msg()
-
-        pose.pose.position.x = wp["x"]
-        pose.pose.position.y = wp["y"]
-        pose.pose.position.z = 0.0
-
-        pose.pose.orientation.z = wp["qz"]
-        pose.pose.orientation.w = wp["qw"]
-
         return pose
 
     def navigate_to_waypoint(self, waypoint_name):
@@ -94,30 +110,3 @@ class GoFishNavi(Node):
 
     def stop_robot(self):
         self.cmd_vel_pub.publish(Twist())
-
-    def run_gameboard_to_user(self):
-        success = self.navigate_to_waypoint("user")
-
-        if success:
-            self.get_logger().info("Robot moved from gameboard to user.")
-        else:
-            self.get_logger().error("Robot could not reach user.")
-
-
-def main(args=None):
-    rclpy.init(args=args)
-
-    node = GoFishNavi()
-
-    try:
-        node.run_gameboard_to_user()
-    except KeyboardInterrupt:
-        node.get_logger().info("Keyboard interrupt received.")
-    finally:
-        node.stop_robot()
-        node.destroy_node()
-        rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    main()
