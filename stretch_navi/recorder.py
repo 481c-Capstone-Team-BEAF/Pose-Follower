@@ -67,22 +67,27 @@ def save_pose(pose_dict):
         json.dump(raw, f, indent=2)
 
 def get_current_pose(node, tf_buffer):
-    # Spin briefly so the TF buffer has fresh data
-    for _ in range(10):
-        rclpy.spin_once(node, timeout_sec=0.05)
-    try:
-        tf = tf_buffer.lookup_transform('map', 'base_link', rclpy.time.Time())
-    except (LookupException, ExtrapolationException) as e:
-        node.get_logger().error(f'TF lookup failed: {e}')
-        return None
-    ps = PoseStamped()
-    ps.header.frame_id = 'map'
-    ps.header.stamp = node.get_clock().now().to_msg()
-    ps.pose.position.x = tf.transform.translation.x
-    ps.pose.position.y = tf.transform.translation.y
-    ps.pose.position.z = tf.transform.translation.z
-    ps.pose.orientation = tf.transform.rotation
-    return ps
+    # Wait until the transform is actually available
+    timeout = 5.0  # seconds
+    start = time.time()
+    while time.time() - start < timeout:
+        rclpy.spin_once(node, timeout_sec=0.1)
+        try:
+            tf = tf_buffer.lookup_transform('map', 'base_link', rclpy.time.Time())
+            # Success — build and return the PoseStamped
+            ps = PoseStamped()
+            ps.header.frame_id = 'map'
+            ps.header.stamp = node.get_clock().now().to_msg()
+            ps.pose.position.x = tf.transform.translation.x
+            ps.pose.position.y = tf.transform.translation.y
+            ps.pose.position.z = tf.transform.translation.z
+            ps.pose.orientation = tf.transform.rotation
+            return ps
+        except (LookupException, ExtrapolationException):
+            continue  # Keep spinning until data arrives or timeout
+
+    node.get_logger().error('TF lookup timed out after 5s')
+    return None
 
 def main():
     rclpy.init()
@@ -142,3 +147,6 @@ def main():
             if navi is not None:
                 navi.waypoints = load_poses_navi()
             print(f"Saved new location with name <{name}>")
+
+if __name__ == "__main__":
+    main()
