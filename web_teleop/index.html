@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fishing Fun! — Stretch Robot</title>
+  <link rel="stylesheet" href="style.css" />
+  <!--
+    roslibjs — load from your robot's web server or a CDN mirror.
+    Uncomment the line below once your rosbridge is running.
+  -->
+  <!-- <script src="http://localhost:9090/roslibjs/roslib.min.js"></script> -->
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ HEADER ═══════════════════════════════════════════════ -->
+  <header>
+    <div class="header-left">
+      <div class="logo-bubble">🎣</div>
+      <div>
+        <div class="logo-text">Fishing <span>Fun!</span></div>
+        <div class="logo-sub">Hello Stretch Robot Controller</div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="status-pill">
+        <div class="status-dot offline" id="status-dot"></div>
+        <span id="status-text">Disconnected</span>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot offline" id="robot-dot"></div>
+        <span id="robot-text">Robot</span>
+      </div>
+      <div class="ws-pill">
+        🔗 ws://localhost:9090
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN 3-COLUMN GRID ═══════════════════════════════════ -->
+  <div class="main">
+
+    <!-- ──────── LEFT PANEL: Commands + Fish ──────── -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="ph-icon">🕹️</span>
+        <h2>Commands</h2>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- Navigation commands -->
+        <button class="cmd-btn"
+          onclick="sendCommand('go_to_gameboard', '🗺️', 'Going to the game board…')">
+          <span class="ci">🗺️</span>
+          <span class="ct">
+            <strong>Go to Gameboard</strong>
+            <small>Navigate to fishing position</small>
+          </span>
+        </button>
+
+        <button class="cmd-btn"
+          onclick="sendCommand('return_home', '🏠', 'Returning home…')">
+          <span class="ci">🏠</span>
+          <span class="ct">
+            <strong>Return Home</strong>
+            <small>Move to home position</small>
+          </span>
+        </button>
+
+        <button class="cmd-btn"
+          onclick="sendCommand('stow_arm', '📦', 'Stowing the arm…')">
+          <span class="ci">📦</span>
+          <span class="ct">
+            <strong>Stow Arm</strong>
+            <small>Fold arm to travel position</small>
+          </span>
+        </button>
+
+        <!-- Fish section -->
+        <div class="section-label">🐟 Grab Fish!</div>
+
+        <div class="fish-grid">
+
+          <button class="fish-btn fish-red-btn"
+            onclick="sendCommand('grab_red', '🐠', 'Grabbing the red fish!')">
+            <span class="fish-icon">🐠</span>
+            Red
+          </button>
+
+          <button class="fish-btn fish-blue-btn"
+            onclick="sendCommand('grab_blue', '🐟', 'Grabbing the blue fish!')">
+            <span class="fish-icon">🐟</span>
+            Blue
+          </button>
+
+          <button class="fish-btn fish-yellow-btn"
+            onclick="sendCommand('grab_yellow', '🐡', 'Grabbing the yellow fish!')">
+            <span class="fish-icon">🐡</span>
+            Yellow
+          </button>
+
+          <button class="fish-btn fish-green-btn"
+            onclick="sendCommand('grab_green', '🐢', 'Grabbing the green fish!')">
+            <span class="fish-icon">🐢</span>
+            Green
+          </button>
+
+        </div>
+
+        <!-- Spacer pushes E-stop to bottom -->
+        <div style="flex:1;"></div>
+
+        <!-- E-Stop -->
+        <button class="estop-btn" onclick="eStop()">
+          <span class="stop-icon">🛑</span>
+          E-STOP
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ──────── CENTER: Camera + Toast + Catch ──────── -->
+    <div class="center-col">
+
+      <!-- Camera panel -->
+      <div class="camera-panel">
+        <div class="camera-titlebar">
+          <div class="cam-dots">
+            <div class="cam-dot r"></div>
+            <div class="cam-dot y"></div>
+            <div class="cam-dot g"></div>
+          </div>
+          <div class="cam-title">📷 Stretch Robot Camera</div>
+          <div class="cam-rec">
+            <div class="rec-dot"></div>
+            LIVE
+          </div>
+        </div>
+
+        <div class="camera-view">
+          <!--
+            Camera stream image.
+            In app.js → startCameraStream() sets the src automatically once connected.
+            You can also set CONFIG.cameraStreamUrl in app.js.
+          -->
+          <img id="camera-stream" alt="Robot camera feed" />
+
+          <div id="cam-placeholder" class="cam-placeholder">
+            <div class="ph-big">🤖</div>
+            <div>Waiting for camera feed…</div>
+            <div class="ph-topic">Topic: /camera/color/image_raw</div>
+          </div>
+
+          <div class="cam-bracket tl"></div>
+          <div class="cam-bracket tr"></div>
+          <div class="cam-bracket bl"></div>
+          <div class="cam-bracket br"></div>
+        </div>
+
+        <div class="camera-footer">
+          <span>/camera/color/image_raw</span>
+          <span id="fps-display">-- fps</span>
+        </div>
+      </div>
+
+      <!-- Toast / feedback bar -->
+      <div class="toast-bar" id="toast-bar">
+        <span class="t-icon" id="toast-icon">🎣</span>
+        <span id="toast-text">Ready to fish!</span>
+      </div>
+
+      <!-- Catch tray -->
+      <div class="panel" style="flex-shrink:0;">
+        <div class="panel-header">
+          <span class="ph-icon">🪣</span>
+          <h2>Your Catch</h2>
+          <div style="margin-left:auto;">
+            <div class="score-badge">
+              🏆 <span class="score-num" id="score-num">0</span> fish
+            </div>
+          </div>
+        </div>
+        <div style="padding:10px 14px 14px;">
+          <div class="catch-tray" id="catch-tray">
+            <span class="catch-empty">No fish yet — get catching!</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ──────── RIGHT PANEL: Robot State + Log ──────── -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="ph-icon">🤖</span>
+        <h2>Robot State</h2>
+      </div>
+
+      <div class="panel-body">
+
+        <div class="state-grid">
+          <div class="state-row">
+            <span class="sr-label">Status</span>
+            <span class="sr-value idle" id="sr-status">IDLE</span>
+          </div>
+          <div class="state-row">
+            <span class="sr-label">Position</span>
+            <span class="sr-value" id="sr-position">—</span>
+          </div>
+          <div class="state-row">
+            <span class="sr-label">Gripper</span>
+            <span class="sr-value" id="sr-gripper">—</span>
+          </div>
+          <div class="state-row">
+            <span class="sr-label">Last Cmd</span>
+            <span class="sr-value" id="sr-last-cmd">—</span>
+          </div>
+        </div>
+
+        <!-- Activity log -->
+        <div class="section-label" style="margin-top:6px;">📋 Activity Log</div>
+        <div class="log-box" id="log-box"></div>
+
+      </div>
+    </div>
+
+  </div><!-- /.main -->
+</div><!-- /.app -->
+
+<script src="app.js"></script>
+</body>
+</html>
